@@ -730,6 +730,7 @@ footer a:hover{color:#fff}
   <div class="pf">
     <div class="tot"><span>Subtotal</span><b id="tot">$0</b></div>
     <button class="btn" id="checkout" type="button" disabled>Checkout</button>
+    <p class="warn" id="coWarn" role="alert" style="margin:0;text-align:center"></p>
     <p class="empty" style="margin:0;text-align:center;font-size:.78rem">Personalisation included. Shipping at checkout.</p>
   </div>
 </aside>
@@ -1049,7 +1050,12 @@ $("mBlank").addEventListener("change",function(e){M.blank=e.target.checked;$("mW
 $("mMinus").onclick=function(){if(M.q>1){M.q--;renderCustomiser();}};
 $("mPlus").onclick=function(){if(M.q<99){M.q++;renderCustomiser();}};
 $("mAdd").onclick=commit;
-$("checkout").onclick=function(){var s=this;s.textContent="Checkout isn't connected yet";setTimeout(function(){s.textContent="Checkout";},2200);};
+$("checkout").onclick=function(){var s=this,w=$("coWarn");
+ s.disabled=true;s.textContent="Opening secure checkout…";w.textContent="";
+ fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bag:bag})})
+  .then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok||!d.url)throw new Error(d.error||"");return d;});})
+  .then(function(d){location.href=d.url;})
+  .catch(function(e){w.textContent=e.message||"We couldn't start checkout. Please try again.";s.textContent="Checkout";s.disabled=bag.length===0;});};
 $("send").onclick=function(){var e=$("ie").value.trim(),n=$("sendNote");
  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){n.textContent="Add a valid email so we can reply.";return;}
  n.textContent="Thanks — this form isn't connected yet, so nothing was sent.";};
@@ -1062,6 +1068,11 @@ function cur(){return document.documentElement.getAttribute("data-theme")||(wind
 
 if(document.getElementById("ini"))$("ini").value=st.i;
 all();
+/* back from Square's hosted checkout */
+if(new URLSearchParams(location.search).get("checkout")==="complete"){
+ bag=[];save();bagR();
+ $("bagBody").innerHTML='<p class="empty">Thank you — your order is in. Square will email your receipt, and we\'ll be in touch when it ships.</p>';
+ history.replaceState(null,"",location.pathname+location.hash);open($("bag"));}
 })();
 
 </script>
