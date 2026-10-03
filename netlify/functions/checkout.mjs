@@ -93,7 +93,9 @@ export default async (req) => {
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.payment_link?.url) {
     console.error("Square payment link failed", res.status, JSON.stringify(data.errors ?? data));
-    return json({ error: "We couldn't start checkout. Please try again in a moment." }, 502);
+    // TEMP: surface Square's error codes while setting up; remove once checkout works.
+    const codes = (data.errors ?? []).map((e) => [e.code, e.field].filter(Boolean).join(" ")).join(", ");
+    return json({ error: `We couldn't start checkout (Square ${res.status}${codes ? ": " + codes : ""}).` }, 502);
   }
   return json({ url: data.payment_link.url });
 };
