@@ -33,7 +33,7 @@ Set these in Netlify → Project configuration → Environment variables:
 
 Square is the source of truth for prices and stock, shared with the studio's Point of Sale.
 
-- Each product is a Square item, with its colours as variations. **Each variation's SKU must match the site's product id** in the `P` array in `index.html` (`nb1`, `pp2`, …). That's how the site knows which illustration and options to show.
+- Each product is a Square item, with its colors as variations. **Each variation's SKU must match the site's product id** in the `P` array in `index.html` (`nb1`, `pp2`, …). That's how the site knows which illustration and options to show.
 - `/api/products` ([netlify/functions/products.mjs](netlify/functions/products.mjs)) returns live prices and stock, cached for 60 seconds. The page applies them on load: low stock shows "Only N left", zero shows "Sold out", and pieces whose SKU isn't in the catalog are hidden. If the feed fails, the page falls back to its built-in prices.
 - **Track inventory should be on for every variation**, including made-to-order pieces: count whatever limits you (blanks, chain, weekly capacity). A variation with tracking off can never sell out on the site, so it can be oversold; only mark it sold out in Square to stop sales.
 - Checkout line items reference the catalog variations, so Square deducts stock when an order is paid, the same as an in-store sale.

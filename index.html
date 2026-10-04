@@ -496,7 +496,7 @@ footer a:hover{color:#fff}
       <div class="head">
         <p class="kick">Handcrafted in Las Vegas</p>
         <h2>Trending bespoke pieces</h2>
-        <p class="lead">Tap Personalise on any piece to set your initials, font, foil and colour before it goes in your bag.</p>
+        <p class="lead">Tap Personalise on any piece to set your initials, font, foil and color before it goes in your bag.</p>
       </div>
       <div class="tabs" role="tablist" id="tabs"></div>
       <div class="row" id="row"></div>
@@ -688,7 +688,7 @@ footer a:hover{color:#fff}
         <p class="kick" id="mKick">Personalise</p>
         <h2 id="mName"></h2>
         <p class="mprice" id="mPrice"></p>
-        <div class="ctl"><span class="lb" id="mcL">Colour</span><div class="ops" role="group" aria-labelledby="mcL" id="mColours"></div></div>
+        <div class="ctl"><span class="lb" id="mcL">Color</span><div class="ops" role="group" aria-labelledby="mcL" id="mColors"></div></div>
         <div class="ctl">
           <label for="mIni">Initials or name <span class="mcount" id="mCount">2 / 3</span></label>
           <input id="mIni" type="text" maxlength="3" autocomplete="off" spellcheck="false" placeholder="ABC">
@@ -697,7 +697,7 @@ footer a:hover{color:#fff}
         <div class="ctl"><span class="lb" id="mpoL">Select position</span><div class="posgrid" role="group" aria-labelledby="mpoL" id="mPos"></div><p class="posnote" id="mPosNote"></p></div>
         <div class="ctl"><span class="lb" id="mfoL">Font</span><div class="ops" role="group" aria-labelledby="mfoL" id="mFonts"></div></div>
         <div class="ctl"><span class="lb" id="mszL">Font size</span><div class="ops" role="group" aria-labelledby="mszL" id="mSizes"></div></div>
-        <div class="ctl"><span class="lb" id="mflL">Foil colour</span><div class="ops" role="group" aria-labelledby="mflL" id="mFoils"></div><p class="posnote" id="mFoilNote" aria-live="polite"></p></div>
+        <div class="ctl"><span class="lb" id="mflL">Foil color</span><div class="ops" role="group" aria-labelledby="mflL" id="mFoils"></div><p class="posnote" id="mFoilNote" aria-live="polite"></p></div>
         <div class="mfoot">
           <div class="stepper"><button type="button" id="mMinus" aria-label="Decrease quantity">−</button><span id="mQty">1</span><button type="button" id="mPlus" aria-label="Increase quantity">+</button></div>
           <button class="btn" id="mAdd" type="button">Add to bag</button>
@@ -975,7 +975,7 @@ document.addEventListener("click",function(e){
  else if(t.dataset.col){for(var ci=0;ci<CATS.length;ci++)if(CATS[ci].id===t.dataset.col)st.t=ci;
   tabs();row();document.getElementById("shop").scrollIntoView({behavior:"smooth"});}
  else if(t.dataset.open){openCustomiser(t.dataset.open);}
- else if(t.dataset.colour){M.id=t.dataset.colour;renderCustomiser();}
+ else if(t.dataset.color){M.id=t.dataset.color;renderCustomiser();}
  else if(t.dataset.mfont){M.font=t.dataset.mfont;renderCustomiser();}
  else if(t.dataset.msize){M.size=t.dataset.msize;renderCustomiser();}
  else if(t.dataset.mfoil){M.f=t.dataset.mfoil;renderCustomiser();}
@@ -1007,8 +1007,8 @@ function renderCustomiser(){
  $("mCount").textContent=(M.i||"").length+" / 3";
  $("mIni").disabled=M.blank;
  var sib=siblings(p);
- $("mColours").innerHTML=sib.length>1?sib.map(function(x){
-   return '<button class="op col" type="button" data-colour="'+x.id+'" aria-pressed="'+(x.id===M.id)+'"><span class="ch" style="background:'+L[x.l].b+'"></span>'+L[x.l].n+(x.stock===0?' · sold out':'')+'</button>';}).join("")
+ $("mColors").innerHTML=sib.length>1?sib.map(function(x){
+   return '<button class="op col" type="button" data-color="'+x.id+'" aria-pressed="'+(x.id===M.id)+'"><span class="ch" style="background:'+L[x.l].b+'"></span>'+L[x.l].n+(x.stock===0?' · sold out':'')+'</button>';}).join("")
    :'<span style="font-size:.85rem;color:var(--muted)">'+L[p.l].n+'</span>';
  $("mFonts").innerHTML=FONTS.map(function(f){
    return '<button class="op t" type="button" data-mfont="'+f.id+'" aria-pressed="'+(M.font===f.id)+'" style="font-family:'+f.css+'">'+f.n+'</button>';}).join("");

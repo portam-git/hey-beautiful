@@ -1,6 +1,6 @@
 // Sets up the Square SANDBOX catalog from the products in index.html, and brings it back in line
 // when run again:
-//  - each piece is an item in its category (also set as its reporting category), with each colour
+//  - each piece is an item in its category (also set as its reporting category), with each color
 //    as a variation whose SKU is the site's product id (nb1, pp2, …);
 //  - every variation is tracked. Tracking is the default even for made-to-order pieces (count the
 //    blanks or capacity you have), so the site can never oversell.
@@ -86,18 +86,18 @@ const CATEGORIES = {
   bags: "Bags & pouches", keyrings: "Keyrings & charms", jewelry: "Jewelry",
 };
 
-// Read the product list and colour names out of index.html.
+// Read the product list and color names out of index.html.
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
-const colours = Object.fromEntries([...html.matchAll(/(\w+):\{b:"#\w+",e:"#\w+",n:"([^"]+)"\}/g)].map((m) => [m[1], m[2]]));
+const colors = Object.fromEntries([...html.matchAll(/(\w+):\{b:"#\w+",e:"#\w+",n:"([^"]+)"\}/g)].map((m) => [m[1], m[2]]));
 const products = [...html.matchAll(/\{id:"(\w+)",s:"(\w+)",c:"(\w+)",n:"((?:[^"\\]|\\.)*)",l:"(\w+)",p:(\d+),m:"((?:[^"\\]|\\.)*)"/g)]
-  .map((m) => ({ id: m[1], shape: m[2], cat: m[3], name: m[4].replace(/\\(.)/g, "$1"), colour: m[5], price: Number(m[6]), desc: m[7].replace(/\\(.)/g, "$1") }));
+  .map((m) => ({ id: m[1], shape: m[2], cat: m[3], name: m[4].replace(/\\(.)/g, "$1"), color: m[5], price: Number(m[6]), desc: m[7].replace(/\\(.)/g, "$1") }));
 if (products.length === 0) throw new Error("Couldn't find the product list in index.html");
 for (const p of products) if (!CATEGORIES[p.cat]) throw new Error(`No Square category for "${p.cat}" (${p.id})`);
 
-// Jewelry shares one "colour", so name its variations by metal instead.
-const variationName = (p) => ({ jp1: "14k gold filled", jp2: "Sterling silver" })[p.id] ?? colours[p.colour] ?? p.colour;
+// Jewelry shares one "color", so name its variations by metal instead.
+const variationName = (p) => ({ jp1: "14k gold filled", jp2: "Sterling silver" })[p.id] ?? colors[p.color] ?? p.color;
 
-// Group colours of the same piece into one Square item.
+// Group colors of the same piece into one Square item.
 const groups = new Map();
 for (const p of products) {
   const key = `${p.shape}|${p.name}`;
