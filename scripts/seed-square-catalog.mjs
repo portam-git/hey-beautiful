@@ -28,7 +28,12 @@ function ask(question, { hidden = false } = {}) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
     if (hidden) rl._writeToOutput = (s) => { if (s.startsWith(question)) rl.output.write(s); };
-    rl.question(question, (answer) => { if (hidden) rl.output.write("\n"); rl.close(); resolve(answer.trim()); });
+    rl.question(question, (answer) => {
+      // Drop bracketed-paste markers and any other non-printable characters a terminal paste can add.
+      const clean = answer.replace(/\x1b\[20[01]~/g, "").replace(/[^\x21-\x7e]/g, "");
+      if (hidden) rl.output.write(clean ? `(received ${clean.length} characters)\n` : "\n");
+      rl.close(); resolve(clean);
+    });
   });
 }
 if (!process.env.SQUARE_ACCESS_TOKEN) process.env.SQUARE_ACCESS_TOKEN = await ask("Sandbox access token (hidden): ", { hidden: true });
@@ -79,6 +84,16 @@ async function listAll(type) {
 // Categories: reuse ones that already exist (matched by name), create the rest.
 const catId = {};
 const objects = [];
+// Check the token and location before doing anything else.
+try {
+  const { location } = await square(`locations/${encodeURIComponent(loc)}`);
+  console.log(`Connected to sandbox location "${location.name}".\n`);
+} catch (e) {
+  console.error(e.status === 401 ? "Square rejected the access token. Use the Sandbox access token (Developer Console → your app → Credentials, Sandbox selected), not the production token or the application secret."
+    : e.status === 404 ? `Square doesn't recognise location "${loc}" for this token. Use the location id from the same sandbox account.`
+    : e.message);
+  process.exit(1);
+}
 const existingCats = new Map((await listAll("CATEGORY")).filter((c) => !c.is_deleted).map((c) => [c.category_data?.name, c.id]));
 for (const [key, name] of Object.entries(CATEGORIES)) {
   catId[key] = existingCats.get(name) ?? `#cat-${key}`;
