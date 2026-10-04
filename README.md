@@ -40,7 +40,7 @@ Square is the source of truth for prices and stock, shared with the studio's Poi
 
 Day to day, change prices and stock in Square Dashboard or the POS app; the site follows within a minute. A brand-new kind of product needs a matching entry in `index.html` (it needs an illustration), with the same SKU in Square.
 
-**Sandbox setup:** [scripts/seed-square-catalog.mjs](scripts/seed-square-catalog.mjs) loads the site's products into the sandbox catalog: each item in its category (also its reporting category), every piece tracked, 10 each. Run it again at any time to fill in missing categories and turn tracking back on; it leaves existing names, prices and stock alone. Set the sandbox `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID` in your shell, then run `node scripts/seed-square-catalog.mjs --dry-run` to see the changes and run it without `--dry-run` to apply them.
+**Sandbox setup:** [scripts/seed-square-catalog.mjs](scripts/seed-square-catalog.mjs) loads the site's products into the sandbox catalog: each item in its category (also its reporting category), every piece tracked, 10 each. Run it again at any time to fill in missing categories and turn tracking back on; it leaves existing names, prices and stock alone. Run `node scripts/seed-square-catalog.mjs`: it asks for the sandbox access token (hidden) and location ID, lists the changes, and asks before applying them.
 
 **Categories in Square** match the site's groups: Notebooks & stationery, Travel accessories, Wallets & card holders, Bags & pouches, Keyrings & charms, Jewelry. The site's tabs still come from `index.html`, so a piece moved to another category in Square stays in its original tab on the site.
 

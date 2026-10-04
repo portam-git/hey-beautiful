@@ -7,13 +7,14 @@
 // Items that already exist keep their names, prices and stock; the script only fills in a missing
 // category and turns tracking on, giving newly tracked variations the starting count.
 //
-// Usage (PowerShell):
-//   $env:SQUARE_ACCESS_TOKEN = "<sandbox access token>"
-//   $env:SQUARE_LOCATION_ID  = "<sandbox location id>"
-//   node scripts/seed-square-catalog.mjs            # add --dry-run to only print the plan
+// Usage: node scripts/seed-square-catalog.mjs [--dry-run] [--yes]
+// It asks for the sandbox access token (hidden) and location id unless SQUARE_ACCESS_TOKEN and
+// SQUARE_LOCATION_ID are set, prints the planned changes, and asks before applying them
+// (--dry-run only prints; --yes applies without asking).
 //
 // Optional: $env:SEED_STOCK = "10"  (starting count for new or newly tracked pieces, default 10)
 import fs from "node:fs";
+import readline from "node:readline";
 import { square } from "../netlify/lib/square.mjs";
 
 const dryRun = process.argv.includes("--dry-run");
@@ -21,8 +22,19 @@ if (process.env.SQUARE_ENVIRONMENT === "production") {
   console.error("This script only seeds the sandbox. In production, add SKUs to your existing Square items instead (see README).");
   process.exit(1);
 }
+
+// Prompts on the terminal; with hidden: true nothing typed or pasted is echoed.
+function ask(question, { hidden = false } = {}) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    if (hidden) rl._writeToOutput = (s) => { if (s.startsWith(question)) rl.output.write(s); };
+    rl.question(question, (answer) => { if (hidden) rl.output.write("\n"); rl.close(); resolve(answer.trim()); });
+  });
+}
+if (!process.env.SQUARE_ACCESS_TOKEN) process.env.SQUARE_ACCESS_TOKEN = await ask("Sandbox access token (hidden): ", { hidden: true });
+if (!process.env.SQUARE_LOCATION_ID) process.env.SQUARE_LOCATION_ID = await ask("Sandbox location id: ");
 if (!(process.env.SQUARE_ACCESS_TOKEN && process.env.SQUARE_LOCATION_ID)) {
-  console.error("Set SQUARE_ACCESS_TOKEN and SQUARE_LOCATION_ID (sandbox values) first.");
+  console.error("A sandbox access token and location id are both needed.");
   process.exit(1);
 }
 const stock = String(Number.parseInt(process.env.SEED_STOCK ?? "10", 10) || 10);
@@ -147,6 +159,10 @@ for (const list of groups.values()) {
 
 console.log(`\n${objects.length} catalog changes; ${startCounts.length} variations will get a starting count of ${stock}.`);
 if (dryRun || objects.length === 0) process.exit(0);
+if (!process.argv.includes("--yes") && !/^y(es)?$/i.test(await ask("Apply these changes to the sandbox catalog? (y/N) "))) {
+  console.log("Nothing changed.");
+  process.exit(0);
+}
 
 const res = await square("catalog/batch-upsert", { idempotency_key: crypto.randomUUID(), batches: [{ objects }] });
 const ids = Object.fromEntries((res.id_mappings ?? []).map((m) => [m.client_object_id, m.object_id]));
