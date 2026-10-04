@@ -23,20 +23,55 @@ if (process.env.SQUARE_ENVIRONMENT === "production") {
   process.exit(1);
 }
 
-// Prompts on the terminal; with hidden: true nothing typed or pasted is echoed.
-function ask(question, { hidden = false } = {}) {
+// Drops bracketed-paste markers and any other non-printable characters a terminal paste can add.
+const clean = (s) => s.replace(/\x1b\[20[01]~/g, "").replace(/[^\x21-\x7e]/g, "");
+
+// Prompts on the terminal and returns the trimmed answer.
+function ask(question) {
   return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    if (hidden) rl._writeToOutput = (s) => { if (s.startsWith(question)) rl.output.write(s); };
-    rl.question(question, (answer) => {
-      // Drop bracketed-paste markers and any other non-printable characters a terminal paste can add.
-      const clean = answer.replace(/\x1b\[20[01]~/g, "").replace(/[^\x21-\x7e]/g, "");
-      if (hidden) rl.output.write(clean ? `(received ${clean.length} characters)\n` : "\n");
-      rl.close(); resolve(clean);
-    });
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(question, (answer) => { rl.close(); resolve(clean(answer)); });
   });
 }
-if (!process.env.SQUARE_ACCESS_TOKEN) process.env.SQUARE_ACCESS_TOKEN = await ask("Sandbox access token (hidden): ", { hidden: true });
+
+// Reads a secret with echo off: the terminal is put in raw mode and each character typed or pasted
+// is shown as "*" instead of itself.
+function askHidden(question) {
+  const { stdin, stdout } = process;
+  if (!stdin.isTTY) { console.error("Run this in a terminal so the token can be entered without showing it."); process.exit(1); }
+  return new Promise((resolve) => {
+    stdout.write(question);
+    let value = "";
+    stdin.setRawMode(true);
+    stdin.setEncoding("utf8");
+    const done = () => {
+      stdin.setRawMode(false); stdin.pause(); stdin.off("data", onData);
+      let v = clean(value);
+      // A doubled paste arrives as the same token twice in a row.
+      if (v.length >= 2 && v.length % 2 === 0 && v.slice(0, v.length / 2) === v.slice(v.length / 2)) {
+        v = v.slice(0, v.length / 2);
+        stdout.write("(the token was pasted twice; using one copy) ");
+      }
+      stdout.write(v ? `(received ${v.length} characters)\n` : "\n");
+      resolve(v);
+    };
+    let inEscape = false; // inside a terminal escape sequence such as a bracketed-paste marker
+    const onData = (chunk) => {
+      for (const ch of chunk) {
+        if (inEscape) { if (/[A-Za-z~]/.test(ch)) inEscape = false; continue; }
+        if (ch === "\x1b") { inEscape = true; continue; }
+        if (ch === "\r" || ch === "\n") return done();
+        if (ch === "\u0003") { stdin.setRawMode(false); stdout.write("\n"); process.exit(130); } // Ctrl+C
+        if (ch === "\u007f" || ch === "\b") {
+          if (value) { value = value.slice(0, -1); stdout.write("\b \b"); }
+        } else if (ch >= " ") { value += ch; stdout.write("*"); }
+      }
+    };
+    stdin.on("data", onData);
+    stdin.resume();
+  });
+}
+if (!process.env.SQUARE_ACCESS_TOKEN) process.env.SQUARE_ACCESS_TOKEN = await askHidden("Sandbox access token (shown as *): ");
 if (!process.env.SQUARE_LOCATION_ID) process.env.SQUARE_LOCATION_ID = await ask("Sandbox location id: ");
 if (!(process.env.SQUARE_ACCESS_TOKEN && process.env.SQUARE_LOCATION_ID)) {
   console.error("A sandbox access token and location id are both needed.");
