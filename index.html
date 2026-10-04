@@ -496,7 +496,7 @@ footer a:hover{color:#fff}
       <div class="head">
         <p class="kick">Handcrafted in Las Vegas</p>
         <h2>Trending bespoke pieces</h2>
-        <p class="lead">Tap Personalise on any piece to set your initials, font, foil and colour before it goes in your bag.</p>
+        <p class="lead">Tap Personalise on any piece to set your initials, font, foil and color before it goes in your bag.</p>
       </div>
       <div class="tabs" role="tablist" id="tabs"></div>
       <div class="row" id="row"></div>
@@ -688,7 +688,7 @@ footer a:hover{color:#fff}
         <p class="kick" id="mKick">Personalise</p>
         <h2 id="mName"></h2>
         <p class="mprice" id="mPrice"></p>
-        <div class="ctl"><span class="lb" id="mcL">Colour</span><div class="ops" role="group" aria-labelledby="mcL" id="mColours"></div></div>
+        <div class="ctl"><span class="lb" id="mcL">Color</span><div class="ops" role="group" aria-labelledby="mcL" id="mColors"></div></div>
         <div class="ctl">
           <label for="mIni">Initials or name <span class="mcount" id="mCount">2 / 3</span></label>
           <input id="mIni" type="text" maxlength="3" autocomplete="off" spellcheck="false" placeholder="ABC">
@@ -697,7 +697,7 @@ footer a:hover{color:#fff}
         <div class="ctl"><span class="lb" id="mpoL">Select position</span><div class="posgrid" role="group" aria-labelledby="mpoL" id="mPos"></div><p class="posnote" id="mPosNote"></p></div>
         <div class="ctl"><span class="lb" id="mfoL">Font</span><div class="ops" role="group" aria-labelledby="mfoL" id="mFonts"></div></div>
         <div class="ctl"><span class="lb" id="mszL">Font size</span><div class="ops" role="group" aria-labelledby="mszL" id="mSizes"></div></div>
-        <div class="ctl"><span class="lb" id="mflL">Foil colour</span><div class="ops" role="group" aria-labelledby="mflL" id="mFoils"></div><p class="posnote" id="mFoilNote" aria-live="polite"></p></div>
+        <div class="ctl"><span class="lb" id="mflL">Foil color</span><div class="ops" role="group" aria-labelledby="mflL" id="mFoils"></div><p class="posnote" id="mFoilNote" aria-live="polite"></p></div>
         <div class="mfoot">
           <div class="stepper"><button type="button" id="mMinus" aria-label="Decrease quantity">−</button><span id="mQty">1</span><button type="button" id="mPlus" aria-label="Increase quantity">+</button></div>
           <button class="btn" id="mAdd" type="button">Add to bag</button>
@@ -876,16 +876,22 @@ function draw(s,l,o){var k=L[l]||L.black,f=S[s]||S.notebook;
  var out='<svg viewBox="0 0 320 360" role="img" aria-label="'+s+(CUR.blank?', no monogram':', personalised '+ini())+'">'+f(k)+'</svg>';
  CUR=st; return out;}
 
-function money(n){return "$"+n;}
-function inCat(p){return st.t===CATS.length-1 ? p.p<50 : p.c===CATS[st.t].id;}
+function money(n){n=Math.round(n*100)/100;return "$"+(n%1?n.toFixed(2):n);}
+/* stock: p.stock is null when untracked (made to order); p.off hides pieces missing from the Square catalog */
+var LOW=3,thanks=false;
+function inBag(id,skip){var q=0;bag.forEach(function(l,ix){if(l.id===id&&ix!==skip)q+=l.q;});return q;}
+/* how many more of a piece can go in the bag (skip = bag line being edited) */
+function left(id,skip){var p=find(id);if(!p||p.stock==null)return Infinity;return Math.max(0,p.stock-inBag(id,skip));}
+function inCat(p){return !p.off&&(st.t===CATS.length-1 ? p.p<50 : p.c===CATS[st.t].id);}
 
 function tabs(){$("tabs").innerHTML=CATS.map(function(c,i){
  return '<button class="tab" role="tab" type="button" data-tab="'+i+'" aria-selected="'+(st.t===i)+'">'+c.l+'</button>';}).join("");
  $("rowLink").textContent=CATS[st.t].k;}
 function row(){$("row").innerHTML=P.filter(inCat).slice(0,8).map(function(p){
- return '<article class="card"><div class="stage">'+(p.f?'<span class="flag">'+p.f+'</span>':'')+draw(p.s,p.l)+'</div>'+
+ var out=p.stock===0,flag=out?"Sold out":p.stock!=null&&p.stock<=LOW?"Only "+p.stock+" left":p.f;
+ return '<article class="card"><div class="stage">'+(flag?'<span class="flag">'+flag+'</span>':'')+draw(p.s,p.l)+'</div>'+
  '<div class="cb"><h3>'+p.n+'</h3><p class="m">'+L[p.l].n+' · '+p.m+'</p>'+
- '<div class="cf"><span class="pr">'+money(p.p)+'</span><button class="btn sm" type="button" data-open="'+p.id+'">Personalise</button></div></div></article>';}).join("");}
+ '<div class="cf"><span class="pr">'+money(p.p)+'</span><button class="btn sm" type="button" data-open="'+p.id+'"'+(out?' disabled':'')+'>'+(out?'Sold out':'Personalise')+'</button></div></div></article>';}).join("");}
 function stages(){
  var pc=PIECES[st.p]||PIECES[0];
  if(document.getElementById("pstage"))$("pstage").innerHTML=draw(pc.s,pc.l);
@@ -918,15 +924,18 @@ function pieces(){if(!document.getElementById("pieces"))return;$("pieces").inner
  return '<button class="op t" type="button" data-piece="'+i+'" aria-pressed="'+(st.p===i)+'">'+p.t+'</button>';}).join("");}
 function find(id){for(var i=0;i<P.length;i++)if(P[i].id===id)return P[i];return null;}
 function bagR(){
- var n=0,t=0; bag.forEach(function(l){var p=find(l.id);n+=l.q;if(p)t+=p.p*l.q;});
- $("cnt").textContent=n;$("tot").textContent=money(t);$("checkout").disabled=n===0;
+ var n=0,t=0,bad=false; bag.forEach(function(l){var p=find(l.id);n+=l.q;if(p)t+=p.p*l.q;});
  var pip=$("pip");pip.textContent=n;pip.hidden=n===0;
  $("bagBody").innerHTML=bag.length?bag.map(function(l,ix){var p=find(l.id);if(!p)return "";
   var spec=l.blank?"No monogram":l.i+" · "+nameOf(l.font,FONTS)+" · "+nameOf(l.size,SIZES)+" · "+nameOf(l.f,FOILS)+" · "+nameOf(l.pos||"mc",POSL);
+  var room=left(l.id),over=p.stock!=null&&inBag(l.id)>p.stock;
+  var issue=p.off?"No longer available — please remove it.":!over?"":p.stock===0?"Sold out — please remove it.":"Only "+p.stock+" left — please lower the quantity.";
+  if(issue)bad=true;
   return '<div class="li"><span class="th">'+draw(p.s,p.l,l)+'</span>'+
-  '<span><strong>'+p.n+'</strong><small>'+L[p.l].n+'<br>'+spec+'</small><button class="ed" type="button" data-edit="'+ix+'">Edit</button></span>'+
-  '<span class="qty"><button type="button" data-dec="'+ix+'" aria-label="Remove one">−</button>'+l.q+'<button type="button" data-inc="'+ix+'" aria-label="Add one">+</button></span></div>';}).join("")
-  :'<p class="empty">Your bag is empty. Pick a piece and we\'ll personalise it.</p>';}
+  '<span><strong>'+p.n+'</strong><small>'+L[p.l].n+'<br>'+spec+'</small>'+(issue?'<small class="warn" style="display:block;margin:.3rem 0 0">'+issue+'</small>':'')+'<button class="ed" type="button" data-edit="'+ix+'">Edit</button></span>'+
+  '<span class="qty"><button type="button" data-dec="'+ix+'" aria-label="Remove one">−</button>'+l.q+'<button type="button" data-inc="'+ix+'" aria-label="Add one"'+(room<=0||p.off?' disabled':'')+'>+</button></span></div>';}).join("")
+  :'<p class="empty">'+(thanks?'Thank you — your order is in. Square will email your receipt, and we\'ll be in touch when it ships.':'Your bag is empty. Pick a piece and we\'ll personalise it.')+'</p>';
+ $("cnt").textContent=n;$("tot").textContent=money(t);$("checkout").disabled=n===0||bad;}
 function collections(){
  var tiles=[{c:"stationery",t:"Notebooks & stationery",s:"notebook",l:"black"},
   {c:"travel",t:"Travel accessories",s:"passport",l:"mocha"},
@@ -935,7 +944,7 @@ function collections(){
   {c:"keyrings",t:"Keyrings & charms",s:"keyring",l:"tan"},
   {c:"jewelry",t:"Jewelry",s:"pendant",l:"metal"}];
  $("cols").innerHTML=tiles.map(function(x){
-  var n=P.filter(function(p){return p.c===x.c;}).length;
+  var n=P.filter(function(p){return p.c===x.c&&!p.off;}).length;
   return '<button class="col-tile" type="button" data-col="'+x.c+'"><span class="cimg">'+draw(x.s,x.l)+'</span>'+
    '<strong>'+x.t+'</strong><small>'+n+' piece'+(n===1?"":"s")+'</small></button>';}).join("");}
 function all(){tabs();row();collections();stages();foils();fonts();sizes();pieces();bagR();}
@@ -966,25 +975,24 @@ document.addEventListener("click",function(e){
  else if(t.dataset.col){for(var ci=0;ci<CATS.length;ci++)if(CATS[ci].id===t.dataset.col)st.t=ci;
   tabs();row();document.getElementById("shop").scrollIntoView({behavior:"smooth"});}
  else if(t.dataset.open){openCustomiser(t.dataset.open);}
- else if(t.dataset.colour){M.id=t.dataset.colour;renderCustomiser();}
+ else if(t.dataset.color){M.id=t.dataset.color;renderCustomiser();}
  else if(t.dataset.mfont){M.font=t.dataset.mfont;renderCustomiser();}
  else if(t.dataset.msize){M.size=t.dataset.msize;renderCustomiser();}
  else if(t.dataset.mfoil){M.f=t.dataset.mfoil;renderCustomiser();}
  else if(t.dataset.mpos){M.pos=t.dataset.mpos;renderCustomiser();}
  else if(t.dataset.edit){shut();openCustomiser(bag[+t.dataset.edit].id,+t.dataset.edit);}
- else if(t.dataset.inc){bag[+t.dataset.inc].q++;save();bagR();}
+ else if(t.dataset.inc){var bl=bag[+t.dataset.inc];if(left(bl.id)>0){bl.q++;save();bagR();}}
  else if(t.dataset.dec){bag[+t.dataset.dec].q--;bag=bag.filter(function(l){return l.q>0;});save();bagR();}});
 /* ---------- product customiser ---------- */
 var M={id:null,i:"AB",f:"gold",font:"arial",size:"md",pos:"mc",blank:false,q:1,edit:null};
 var modal=$("modal");
-function siblings(p){return P.filter(function(x){return x.n===p.n&&x.s===p.s;});}
+function siblings(p){return P.filter(function(x){return x.n===p.n&&x.s===p.s&&(!x.off||x.id===p.id);});}
 function openCustomiser(id,editIndex){
  var p=find(id); if(!p)return;
  if(typeof editIndex==="number"){var l=bag[editIndex];
    M={id:l.id,i:l.i,f:l.f,font:l.font,size:l.size,pos:l.pos||"mc",blank:l.blank,q:l.q,edit:editIndex};}
  else M={id:id,i:st.i||"AB",f:st.f,font:st.font,size:st.size,pos:"mc",blank:false,q:1,edit:null};
  $("mIni").value=M.i; $("mBlank").checked=M.blank; $("mWarn").textContent="";
- $("mAdd").textContent=M.edit===null?"Add to bag":"Update bag";
  $("mKick").textContent=M.edit===null?"Personalise":"Edit your piece";
  renderCustomiser(); modal.classList.add("open"); document.body.style.overflow="hidden";
  setTimeout(function(){$("mIni").focus();},260);
@@ -999,8 +1007,8 @@ function renderCustomiser(){
  $("mCount").textContent=(M.i||"").length+" / 3";
  $("mIni").disabled=M.blank;
  var sib=siblings(p);
- $("mColours").innerHTML=sib.length>1?sib.map(function(x){
-   return '<button class="op col" type="button" data-colour="'+x.id+'" aria-pressed="'+(x.id===M.id)+'"><span class="ch" style="background:'+L[x.l].b+'"></span>'+L[x.l].n+'</button>';}).join("")
+ $("mColors").innerHTML=sib.length>1?sib.map(function(x){
+   return '<button class="op col" type="button" data-color="'+x.id+'" aria-pressed="'+(x.id===M.id)+'"><span class="ch" style="background:'+L[x.l].b+'"></span>'+L[x.l].n+(x.stock===0?' · sold out':'')+'</button>';}).join("")
    :'<span style="font-size:.85rem;color:var(--muted)">'+L[p.l].n+'</span>';
  $("mFonts").innerHTML=FONTS.map(function(f){
    return '<button class="op t" type="button" data-mfont="'+f.id+'" aria-pressed="'+(M.font===f.id)+'" style="font-family:'+f.css+'">'+f.n+'</button>';}).join("");
@@ -1009,6 +1017,12 @@ function renderCustomiser(){
  $("mFoils").innerHTML=FOILS.map(function(f){
    return '<button class="op" type="button" data-mfoil="'+f.id+'" aria-pressed="'+(M.f===f.id)+'"'+(M.blank?' disabled style="opacity:.4"':'')+'><span class="dt" style="background:'+f.s+'"></span>'+f.n+'</button>';}).join("");
 
+ var room=left(M.id,M.edit);
+ if(M.q>room&&room>0)M.q=room;
+ $("mQty").textContent=M.q;
+ $("mPlus").disabled=M.q>=Math.min(99,room);
+ $("mAdd").disabled=room===0||p.off;
+ $("mAdd").textContent=p.off?"Unavailable":room===0?(p.stock===0?"Sold out":"All in your bag"):M.edit===null?"Add to bag":"Update bag";
  renderPos();renderFoilNote();
 }
 function lum(hex){var h=hex.replace("#",""),v=[0,2,4].map(function(i){var c=parseInt(h.substr(i,2),16)/255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4);});
@@ -1032,6 +1046,7 @@ function renderPos(){
 }
 function commit(){
  if(!M.blank&&!(M.i||"").length){$("mWarn").textContent="Add your initials, or tick “No monogram”.";return;}
+ if(M.q>left(M.id,M.edit)){$("mWarn").textContent="Not enough left in stock for that quantity.";return;}
  var line={id:M.id,i:M.i,f:M.f,font:M.font,size:M.size,pos:M.pos||"mc",blank:M.blank,q:M.q};
  if(M.edit!==null){bag[M.edit]=line;}
  else{
@@ -1048,7 +1063,7 @@ $("mIni").addEventListener("input",function(e){
  M.i=e.target.value.toUpperCase().replace(/[^A-Za-z]/g,"");e.target.value=M.i;$("mWarn").textContent="";renderCustomiser();});
 $("mBlank").addEventListener("change",function(e){M.blank=e.target.checked;$("mWarn").textContent="";renderCustomiser();});
 $("mMinus").onclick=function(){if(M.q>1){M.q--;renderCustomiser();}};
-$("mPlus").onclick=function(){if(M.q<99){M.q++;renderCustomiser();}};
+$("mPlus").onclick=function(){if(M.q<Math.min(99,left(M.id,M.edit))){M.q++;renderCustomiser();}};
 $("mAdd").onclick=commit;
 $("checkout").onclick=function(){var s=this,w=$("coWarn");
  s.disabled=true;s.textContent="Opening secure checkout…";w.textContent="";
@@ -1070,9 +1085,16 @@ if(document.getElementById("ini"))$("ini").value=st.i;
 all();
 /* back from Square's hosted checkout */
 if(new URLSearchParams(location.search).get("checkout")==="complete"){
- bag=[];save();bagR();
- $("bagBody").innerHTML='<p class="empty">Thank you — your order is in. Square will email your receipt, and we\'ll be in touch when it ships.</p>';
+ bag=[];thanks=true;save();bagR();
  history.replaceState(null,"",location.pathname+location.hash);open($("bag"));}
+/* live prices and stock from Square; keeps the built-in list if the feed is unavailable */
+fetch("/api/products").then(function(r){return r.ok?r.json():null;}).then(function(d){
+ var live=d&&d.products;
+ if(!live||!P.some(function(p){return Object.prototype.hasOwnProperty.call(live,p.id);}))return;
+ P.forEach(function(p){var x=Object.prototype.hasOwnProperty.call(live,p.id)?live[p.id]:null;
+  p.off=!x;if(x){p.p=x.price/100;p.stock=x.stock;}});
+ all();if(modal.classList.contains("open"))renderCustomiser();
+}).catch(function(){});
 })();
 
 </script>
