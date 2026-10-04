@@ -1,13 +1,14 @@
 // One-time setup: loads the products from index.html into the Square SANDBOX catalog,
 // with each colour as a variation whose SKU is the site's product id (nb1, pp2, …).
-// Leather pieces are tracked and get a starting stock count; jewelry is left untracked (made to order).
+// Every variation is tracked and gets a starting stock count. Tracking is the default even for
+// made-to-order pieces (count the blanks or capacity you have), so the site can never oversell.
 //
 // Usage (PowerShell):
 //   $env:SQUARE_ACCESS_TOKEN = "<sandbox access token>"
 //   $env:SQUARE_LOCATION_ID  = "<sandbox location id>"
 //   node scripts/seed-square-catalog.mjs            # add --dry-run to only print the plan
 //
-// Optional: $env:SEED_STOCK = "10"  (starting count for each tracked piece, default 10)
+// Optional: $env:SEED_STOCK = "10"  (starting count for each piece, default 10)
 // SKUs that already exist in the catalog are skipped, so it is safe to run again.
 import fs from "node:fs";
 import { square } from "../netlify/lib/square.mjs";
@@ -70,8 +71,7 @@ for (const list of groups.values()) {
       name: list[0].name,
       ...(descs.size === 1 ? { description: list[0].desc } : {}),
       variations: list.map((p) => {
-        const track = p.cat !== "jewelry";
-        if (track) tracked.push(p.id);
+        tracked.push(p.id);
         return {
           type: "ITEM_VARIATION",
           id: `#${p.id}`,
@@ -81,7 +81,7 @@ for (const list of groups.values()) {
             sku: p.id,
             pricing_type: "FIXED_PRICING",
             price_money: { amount: p.price * 100, currency: "USD" },
-            track_inventory: track,
+            track_inventory: true,
           },
         };
       }),
@@ -90,7 +90,7 @@ for (const list of groups.values()) {
 }
 
 for (const o of objects) {
-  console.log(`${o.item_data.name}: ${o.item_data.variations.map((v) => `${v.item_variation_data.name} [${v.item_variation_data.sku}] $${v.item_variation_data.price_money.amount / 100}${v.item_variation_data.track_inventory ? ` × ${stock}` : " (made to order)"}`).join(", ")}`);
+  console.log(`${o.item_data.name}: ${o.item_data.variations.map((v) => `${v.item_variation_data.name} [${v.item_variation_data.sku}] $${v.item_variation_data.price_money.amount / 100} × ${stock}`).join(", ")}`);
 }
 console.log(`\n${objects.length} items, ${objects.reduce((n, o) => n + o.item_data.variations.length, 0)} variations, ${tracked.length} tracked.`);
 if (dryRun || objects.length === 0) process.exit(0);

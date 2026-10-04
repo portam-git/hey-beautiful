@@ -35,12 +35,12 @@ Square is the source of truth for prices and stock, shared with the studio's Poi
 
 - Each product is a Square item, with its colours as variations. **Each variation's SKU must match the site's product id** in the `P` array in `index.html` (`nb1`, `pp2`, …). That's how the site knows which illustration and options to show.
 - `/api/products` ([netlify/functions/products.mjs](netlify/functions/products.mjs)) returns live prices and stock, cached for 60 seconds. The page applies them on load: low stock shows "Only N left", zero shows "Sold out", and pieces whose SKU isn't in the catalog are hidden. If the feed fails, the page falls back to its built-in prices.
-- Pieces with **Track inventory** turned off in Square are treated as made to order and never sell out, unless you mark them sold out in Square.
+- **Track inventory should be on for every variation**, including made-to-order pieces: count whatever limits you (blanks, chain, weekly capacity). A variation with tracking off can never sell out on the site, so it can be oversold; only mark it sold out in Square to stop sales.
 - Checkout line items reference the catalog variations, so Square deducts stock when an order is paid, the same as an in-store sale.
 
 Day to day, change prices and stock in Square Dashboard or the POS app; the site follows within a minute. A brand-new kind of product needs a matching entry in `index.html` (it needs an illustration), with the same SKU in Square.
 
-**Sandbox setup:** [scripts/seed-square-catalog.mjs](scripts/seed-square-catalog.mjs) loads the site's products into the sandbox catalog (leather tracked at 10 each, jewelry made to order). Run `node scripts/seed-square-catalog.mjs --dry-run` to preview it, then run it with the sandbox `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID` set in your shell.
+**Sandbox setup:** [scripts/seed-square-catalog.mjs](scripts/seed-square-catalog.mjs) loads the site's products into the sandbox catalog (every piece tracked, 10 each). Run `node scripts/seed-square-catalog.mjs --dry-run` to preview it, then run it with the sandbox `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID` set in your shell.
 
 **Production setup:** don't run the script. Add the SKUs to your existing Square items instead, and create any that are missing in Square Dashboard.
 
